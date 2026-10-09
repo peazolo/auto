@@ -1,0 +1,16 @@
+# Supabase CLI config (used by `supabase link` / `supabase functions deploy`).
+project_id = "autox"
+
+[auth]
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["io.autox.app://login-callback", "http://localhost:8080"]
+
+# The reminders job authenticates with its own CRON_SECRET header instead of a user JWT.
+[functions.reminders]
+verify_jwt = false
+
+[functions.diagnose]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
