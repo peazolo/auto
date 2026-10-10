@@ -5,7 +5,7 @@ create extension if not exists pgcrypto;
 
 -- ───────────────────────── helpers ─────────────────────────
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at = now();
   return new;
@@ -195,6 +195,12 @@ returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.vehicles where id = v and user_id = (select auth.uid()));
 $$;
 
+-- Trigger and policy helpers are not meant to be called over the API.
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.handle_user_email_change() from public, anon, authenticated;
+revoke execute on function public.owns_vehicle(uuid) from public, anon;
+grant execute on function public.owns_vehicle(uuid) to authenticated;
+
 create policy "profile: read own" on public.profiles for select using (id = (select auth.uid()));
 create policy "profile: update own" on public.profiles for update using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
@@ -258,6 +264,7 @@ begin
   end if;
 end $$;
 
+revoke execute on function public.complete_maintenance_task(uuid, date, int, numeric, text, text) from public, anon;
 grant execute on function public.complete_maintenance_task(uuid, date, int, numeric, text, text) to authenticated;
 
 -- ───────────────────────── storage ─────────────────────────

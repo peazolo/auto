@@ -1,11 +1,11 @@
 # Supabase CLI config (used by `supabase link` / `supabase functions deploy`).
-project_id = "autox"
+project_id = "avfvbzfwvfdfvveebbgc"
 
 [auth]
-site_url = "http://localhost:8080"
-additional_redirect_urls = ["io.autox.app://login-callback", "http://localhost:8080"]
+site_url = "https://peazolo.github.io/auto/"
+additional_redirect_urls = ["https://peazolo.github.io/auto/", "io.autox.app://login-callback", "http://localhost:8080"]
 
-# The reminders job authenticates with its own CRON_SECRET header instead of a user JWT.
+# The reminders job authenticates with the Vault secret `autox_cron_secret` instead of a user JWT.
 [functions.reminders]
 verify_jwt = false
 

@@ -1,7 +1,8 @@
 name: Build & deploy
 
 # Builds the web app (deployed to GitHub Pages) and an Android APK on every push to main.
-# Required repository secrets: SUPABASE_URL, SUPABASE_ANON_KEY.
+# Uses the AUTOX Supabase project by default. To point at another project, add the
+# repository secrets SUPABASE_URL and SUPABASE_ANON_KEY.
 
 on:
   push:
@@ -31,8 +32,8 @@ jobs:
         run: |
           cat > env.json <<JSON
           {
-            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
-            "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}",
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL || 'https://avfvbzfwvfdfvveebbgc.supabase.co' }}",
+            "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_9-nKIK9kInAF-Mkdln1f6w_PPaplxoR' }}",
             "WEB_REDIRECT_URL": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           }
           JSON
@@ -71,8 +72,8 @@ jobs:
         run: |
           cat > env.json <<JSON
           {
-            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
-            "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}",
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL || 'https://avfvbzfwvfdfvveebbgc.supabase.co' }}",
+            "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_9-nKIK9kInAF-Mkdln1f6w_PPaplxoR' }}",
             "WEB_REDIRECT_URL": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           }
           JSON

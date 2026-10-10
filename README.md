@@ -16,54 +16,42 @@ The backend is [Supabase](https://supabase.com): auth, Postgres with row-level s
 
 ---
 
-## 1. Set up the backend (Supabase), about 10 minutes
+## 1. Backend (Supabase)
 
-1. Create a free project at [supabase.com](https://supabase.com/dashboard).
-2. **Database:** open *SQL Editor*, paste the whole of [`supabase/migrations/20261009000000_init.sql`](supabase/migrations/20261009000000_init.sql) and run it. This creates the tables, security rules and the private `files` storage bucket.
-3. **Edge functions:** install the [Supabase CLI](https://supabase.com/docs/guides/cli), then from this folder:
+The live backend is the Supabase project **auto** (`avfvbzfwvfdfvveebbgc`). It is already set up: tables, security rules, private file storage, the three edge functions, and the daily reminders job at 07:00 UTC. What is left to do in the [Supabase dashboard](https://supabase.com/dashboard/project/avfvbzfwvfdfvveebbgc):
+
+1. **AI key:** *Edge Functions → Secrets*, add `ANTHROPIC_API_KEY` (from [console.anthropic.com](https://console.anthropic.com)). Until then the AI Mechanic replies "not configured yet".
+2. **Login links:** *Authentication → URL Configuration*. Set *Site URL* to `https://peazolo.github.io/auto/` and add these *Redirect URLs*: `https://peazolo.github.io/auto/`, `io.autox.app://login-callback`, `http://localhost:8080`.
+3. **Emails for real users:** Supabase's built-in sender only sends a few sign-up emails an hour. Set up custom SMTP under *Authentication → Emails* (Resend works well).
+4. *(Optional)* **Reminder emails:** add `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `AUTOX <alerts@yourdomain.com>`, on a domain verified in Resend) and `APP_URL` (`https://peazolo.github.io/auto/`) as function secrets. In-app alerts work without them.
+
+Optional function secrets: `AI_MODEL` (default `claude-opus-5-5`) and `AI_DAILY_LIMIT` (AI questions per user per day, default 40).
+
+### Setting up a fresh Supabase project instead
+1. Run every file in [`supabase/migrations`](supabase/migrations) in order in the SQL editor (or `supabase db push`).
+2. Deploy the functions with the [Supabase CLI](https://supabase.com/docs/guides/cli):
    ```bash
-   supabase login
    supabase link --project-ref YOUR_PROJECT_REF
    supabase functions deploy diagnose
    supabase functions deploy delete-account
    supabase functions deploy reminders --no-verify-jwt
    ```
-4. **Secrets** for the functions:
-   ```bash
-   supabase secrets set \
-     ANTHROPIC_API_KEY=sk-ant-...            \
-     RESEND_API_KEY=re_...                   \
-     EMAIL_FROM="AUTOX <alerts@yourdomain.com>" \
-     APP_URL=https://your-site.example.com   \
-     CRON_SECRET=$(openssl rand -hex 24)
-   ```
-   | Secret | What it's for |
-   |---|---|
-   | `ANTHROPIC_API_KEY` | The AI mechanic. Get one at [console.anthropic.com](https://console.anthropic.com). |
-   | `RESEND_API_KEY`, `EMAIL_FROM` | Reminder emails via [resend.com](https://resend.com) (free tier is fine). `EMAIL_FROM` must use a domain you verified there. Without these, in-app alerts still work. |
-   | `APP_URL` | Your web app's address, used for links in emails. |
-   | `CRON_SECRET` | Protects the reminders endpoint. Any long random string. |
-   | `AI_MODEL` *(optional)* | Defaults to `claude-opus-5-5`. |
-   | `AI_DAILY_LIMIT` *(optional)* | AI questions per user per day. Defaults to 40. |
-5. **Daily reminders:** open [`supabase/setup/schedule_reminders.sql`](supabase/setup/schedule_reminders.sql), replace `<PROJECT_REF>` and `<CRON_SECRET>`, and run it in the SQL editor. It runs every day at 07:00 UTC.
-6. **Auth settings** (*Authentication → URL Configuration*):
-   - *Site URL*: your web app's address.
-   - *Redirect URLs*: add your web address and `io.autox.app://login-callback` (for the phone apps).
-   - For real users, set up custom SMTP under *Authentication → Emails*. Supabase's built-in sender is rate-limited to a few emails an hour.
+3. Run [`supabase/setup/schedule_reminders.sql`](supabase/setup/schedule_reminders.sql) with your project ref filled in.
+4. Do steps 1 to 4 above, and put your project's URL and publishable key in `env.json` and the workflow.
 
 ## 2. Configure the app
 
-Copy `env.example.json` to `env.json` and fill it in (*Project Settings → API*):
+`env.example.json` already points at the live project. Copy it to `env.json` for local runs:
 
 ```json
 {
-  "SUPABASE_URL": "https://YOUR-PROJECT-REF.supabase.co",
-  "SUPABASE_ANON_KEY": "your-anon-or-publishable-key",
-  "WEB_REDIRECT_URL": "https://your-site.example.com"
+  "SUPABASE_URL": "https://avfvbzfwvfdfvveebbgc.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_...",
+  "WEB_REDIRECT_URL": "https://peazolo.github.io/auto/"
 }
 ```
 
-`env.json` is git-ignored. The anon/publishable key is safe in a client app; row-level security protects the data.
+The publishable key is safe in a client app; row-level security protects the data.
 
 ## 3. Run and build
 
@@ -84,11 +72,7 @@ Before publishing to the stores, change the app id (`io.autox.app` in `android/a
 
 ## 4. Host the web app
 
-**Automatic (GitHub Pages):** this repo includes [`.github/workflows/build.yml`](.github/workflows/build.yml). In your GitHub repo:
-1. *Settings → Secrets and variables → Actions*: add `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
-2. *Settings → Pages*: set *Source* to **GitHub Actions**.
-3. Push to `main`. The site goes live at `https://<you>.github.io/<repo>/`, and an Android APK is attached to each workflow run under *Artifacts*.
-4. Add that address to Supabase's Site URL / Redirect URLs, and set `APP_URL` to it.
+**Automatic (GitHub Pages):** this repo includes [`.github/workflows/build.yml`](.github/workflows/build.yml). It builds against the live Supabase project, so the only setup is: *Settings → Pages*, set *Source* to **GitHub Actions**. Every push to `main` then publishes the site at `https://peazolo.github.io/auto/` and attaches an Android APK to the workflow run under *Artifacts*.
 
 **Anywhere else:** run the web build and upload `build/web` to Netlify, Firebase Hosting, Cloudflare Pages or any static host. Configure it to serve `index.html` for unknown paths (a Netlify `_redirects` file is already included).
 
@@ -112,6 +96,6 @@ supabase/
 Videos never leave the device. The app samples up to six still frames (in the browser with a canvas, on phones with a thumbnail plugin) and sends those, so it works on any plan and stays fast. Ask users to describe sounds, since the AI sees frames, not audio.
 
 ### Security
-Every table has row-level security so users only ever see their own rows. Files live in a private bucket under each user's own folder and are served with short-lived signed URLs. The AI and account-deletion functions verify the user's token; the reminders function requires `CRON_SECRET`.
+Every table has row-level security so users only ever see their own rows. Files live in a private bucket under each user's own folder and are served with short-lived signed URLs. The AI and account-deletion functions verify the user's token; the reminders function only runs with the secret the cron job reads from Vault.
 
 Fonts: Fraunces and Plus Jakarta Sans, both under the SIL Open Font License (see `assets/fonts`).

@@ -1,6 +1,6 @@
 // Daily job: finds maintenance that's due/overdue and documents that are expiring/expired,
 // then creates in-app alerts and sends one email digest per user.
-// Scheduled with pg_cron (see supabase/setup/schedule_reminders.sql).
+// Scheduled with pg_cron (see supabase/migrations/*_reminders_schedule.sql).
 import { adminClient } from "../_shared/clients.ts";
 import { json } from "../_shared/cors.ts";
 import { DOC_TYPES, documentStatus, escapeHtml, fmtDate, fmtNum, relativeDays, taskStatus, vehicleName } from "../_shared/format.ts";
@@ -10,11 +10,20 @@ const PAGE = 500;
 
 type Item = { kind: string; title: string; body: string; link: string };
 
-Deno.serve(async (req) => {
-  const secret = Deno.env.get("CRON_SECRET");
-  if (!secret || req.headers.get("x-cron-secret") !== secret) return json({ error: "Unauthorized" }, 401);
+// The cron job sends the secret stored in Vault as `autox_cron_secret`.
+// A CRON_SECRET env var is also accepted, for projects that prefer function secrets.
+async function authorized(db: ReturnType<typeof adminClient>, given: string | null) {
+  if (!given) return false;
+  const envSecret = Deno.env.get("CRON_SECRET");
+  if (envSecret && given === envSecret) return true;
+  const { data } = await db.rpc("verify_cron_secret", { p_secret: given });
+  return data === true;
+}
 
+Deno.serve(async (req) => {
   const db = adminClient();
+  if (!(await authorized(db, req.headers.get("x-cron-secret")))) return json({ error: "Unauthorized" }, 401);
+
   const now = new Date();
   const cutoff = new Date(now.getTime() - RENOTIFY_DAYS * 86_400_000).toISOString();
   const perUser = new Map<string, Item[]>();
